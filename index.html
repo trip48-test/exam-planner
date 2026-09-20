@@ -371,7 +371,7 @@
     align-items: center;
     gap: 6px;
     background: var(--paper);
-    padding: 5px 10px;
+    padding: 6px 12px;
     border-radius: var(--radius-sm);
     color: var(--green);
     text-decoration: none;
@@ -567,6 +567,10 @@
     background: var(--paper);
     color: var(--ink);
   }
+  .field input[type="file"] {
+    padding: 8px;
+    background: var(--paper-raised);
+  }
   .field input:focus, .field textarea:focus {
     outline: none;
     border-color: var(--ink);
@@ -575,6 +579,15 @@
   .field-row { display: flex; gap: 12px; }
   .field-row .field { flex: 1; }
   textarea { resize: vertical; min-height: 60px; }
+
+  .file-preview {
+    font-size: 12.5px;
+    color: var(--pencil);
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
   .modal-actions {
     display: flex;
@@ -688,20 +701,17 @@
         </div>
       </div>
       <div class="field">
-        <label for="exam-location">Location <span style="font-weight:400;">(optional)</span></label>
-        <input type="text" id="exam-location" placeholder="e.g. Room 204" autocomplete="off">
-      </div>
-      <div class="field">
         <label for="exam-lernziele">Lernziele / Learning Goals <span style="font-weight:400;">(optional)</span></label>
         <textarea id="exam-lernziele" placeholder="Topics to cover, goals, or study objectives..."></textarea>
       </div>
       <div class="field">
-        <label for="exam-file">File / Document Link <span style="font-weight:400;">(optional)</span></label>
-        <input type="url" id="exam-file" placeholder="https://drive.google.com/... or link to study material" autocomplete="off">
+        <label for="exam-file-input">Attach Document or File <span style="font-weight:400;">(optional)</span></label>
+        <input type="file" id="exam-file-input">
+        <div class="file-preview" id="current-file-preview" style="display:none;"></div>
       </div>
       <div class="field">
         <label for="exam-notes">Notes <span style="font-weight:400;">(optional)</span></label>
-        <textarea id="exam-notes" placeholder="What to bring, room details, general notes..."></textarea>
+        <textarea id="exam-notes" placeholder="What to bring, general notes..."></textarea>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -746,6 +756,7 @@
   let currentView = 'list';
   let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   let pendingDeleteId = null;
+  let currentFileData = null;
 
   // ---------- Real-Time Synchronization ----------
   function initRealtimeSync() {
@@ -896,7 +907,7 @@
           <p class="label">Next up</p>
           <p class="count">${countdownText}</p>
           <p class="exam-name">${escapeHtml(next.subject)}</p>
-          <p class="exam-meta">${formatDateLong(next.date)}${next.time ? ' · ' + formatTime(next.time) : ''}${next.location ? ' · ' + escapeHtml(next.location) : ''}</p>
+          <p class="exam-meta">${formatDateLong(next.date)}${next.time ? ' · ' + formatTime(next.time) : ''}</p>
         </div>
         <div class="stub">
           <span class="swatch" style="background:${color}"></span>
@@ -941,7 +952,7 @@
     const color = colorFor(e.subject);
     const c = countdownLabel(e.date);
 
-    let hasExtra = e.lernziele || e.file || e.notes;
+    let hasExtra = e.lernziele || e.fileData || e.notes;
 
     return `
       <div class="exam-card">
@@ -954,7 +965,6 @@
               <div class="meta">
                 <span>${formatDateLong(e.date)}</span>
                 ${e.time ? `<span>${formatTime(e.time)}</span>` : ''}
-                ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ''}
               </div>
             </div>
             <div class="right">
@@ -978,12 +988,12 @@
                   <p>${escapeHtml(e.lernziele)}</p>
                 </div>
               ` : ''}
-              ${e.file ? `
+              ${e.fileData ? `
                 <div class="detail-block">
-                  <strong>Attached File / Material:</strong>
-                  <a href="${escapeHtml(e.file)}" target="_blank" rel="noopener noreferrer" class="file-link-tag">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Open Document Link
+                  <strong>Attached File:</strong>
+                  <a href="${e.fileData.data}" download="${escapeHtml(e.fileData.name)}" class="file-link-tag">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Download ${escapeHtml(e.fileData.name)}
                   </a>
                 </div>
               ` : ''}
@@ -1085,6 +1095,10 @@
     const form = document.getElementById('exam-form');
     form.reset();
     clearErrors();
+    currentFileData = null;
+
+    const preview = document.getElementById('current-file-preview');
+    preview.style.display = 'none';
 
     if (id) {
       const e = exams.find(x => x.id === id);
@@ -1094,10 +1108,14 @@
       document.getElementById('exam-subject').value = e.subject;
       document.getElementById('exam-date').value = e.date;
       document.getElementById('exam-time').value = e.time || '';
-      document.getElementById('exam-location').value = e.location || '';
       document.getElementById('exam-lernziele').value = e.lernziele || '';
-      document.getElementById('exam-file').value = e.file || '';
       document.getElementById('exam-notes').value = e.notes || '';
+      
+      if (e.fileData) {
+        currentFileData = e.fileData;
+        preview.textContent = `Attached: ${e.fileData.name}`;
+        preview.style.display = 'block';
+      }
     } else {
       document.getElementById('modal-title').textContent = 'Add exam';
       document.getElementById('save-btn').textContent = 'Save exam';
@@ -1116,6 +1134,30 @@
     document.getElementById('field-date').classList.remove('has-error');
   }
 
+  // ---------- File Handling ----------
+  document.getElementById('exam-file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) { // 8MB safety limit for database storage
+      alert("File is too large! Please upload a file smaller than 8MB.");
+      this.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      currentFileData = {
+        name: file.name,
+        data: evt.target.result
+      };
+      const preview = document.getElementById('current-file-preview');
+      preview.textContent = `Attached: ${file.name}`;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
   document.getElementById('exam-form').addEventListener('submit', function(ev) {
     ev.preventDefault();
     clearErrors();
@@ -1131,11 +1173,13 @@
       subject,
       date,
       time: document.getElementById('exam-time').value,
-      location: document.getElementById('exam-location').value.trim(),
       lernziele: document.getElementById('exam-lernziele').value.trim(),
-      file: document.getElementById('exam-file').value.trim(),
       notes: document.getElementById('exam-notes').value.trim(),
     };
+
+    if (currentFileData) {
+      data.fileData = currentFileData;
+    }
 
     if (id) {
       examsRef.child(id).update(data);
