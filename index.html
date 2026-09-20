@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shared Exam Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<!-- Firebase Compatibility Libraries -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+  :root {
+    --ink: #1B2A46;
+    --ink-soft: #445374;
+    --paper: #F1EFE2;
+    --paper-raised: #FFFFFF;
+    --line: #DCD6C2;
+    --pencil: #746C5C;
+    --green: #2F6D5C;
+    --green-soft: #E4EEE9;
+    --amber: #C97A20;
+    --amber-soft: #FBEBD6;
+    --red: #B14A38;
+    --red-soft: #F6E2DC;
+    --shadow: rgba(27, 42, 70, 0.10);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(27,42,70,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+  }
+
+  /* ---------- Header ---------- */
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+
+  .brand h1 {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: 34px;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+
+  .brand p {
+    margin: 0;
+    color: var(--pencil);
+    font-size: 14.5px;
+    max-width: 34ch;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .btn {
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 11px 18px;
+    font-size: 14.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-primary:hover { background: #101c33; }
+  .btn-primary:active { transform: translateY(1px); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+  .btn-ghost:hover { border-color: var(--ink); }
+
+  .btn-plain {
+    background: none;
+    border: none;
+    color: var(--pencil);
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+  }
+  .btn-plain:hover { background: var(--line); color: var(--ink); }
+
+  .icon-plus {
+    width: 15px; height: 15px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .icon-plus::before, .icon-plus::after {
+    content: "";
+    position: absolute;
+    background: currentColor;
+  }
+  .icon-plus::before { top: 6.5px; left: 0; width: 15px; height: 2px; }
+  .icon-plus::after { left: 6.5px; top: 0; height: 15px; width: 2px; }
+
+  /* ---------- Hero / next-up ticket ---------- */
+
+  .hero {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: var(--radius-md);
+    padding: 26px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 34px;
+    position: relative;
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    right: -40px; top: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.06), transparent 70%);
+  }
+
+  .hero .label {
+    font-size: 13px;
+    color: #A9B6D1;
+    margin: 0 0 10px;
+    font-weight: 500;
+  }
+
+  .hero .count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 52px;
+    font-weight: 600;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .hero .count small {
+    font-size: 16px;
+    font-weight: 500;
+    color: #A9B6D1;
+    margin-left: 6px;
+  }
+
+  .hero .exam-name {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    margin: 10px 0 0;
+  }
+
+  .hero .exam-meta {
+    color: #A9B6D1;
+    font-size: 13.5px;
+    margin-top: 4px;
+  }
+
+  .hero .stub {
+    border-left: 1.5px dashed rgba(255,255,255,0.25);
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 160px;
+  }
+
+  .hero .stub .swatch {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+
+  .hero.empty {
+    background: var(--paper-raised);
+    color: var(--ink);
+    border: 1.5px dashed var(--line);
+    justify-content: flex-start;
+  }
+  .hero.empty::before { display: none; }
+  .hero.empty .icon-cal {
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+  }
+  .hero.empty .copy h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    margin: 0 0 4px;
+    font-weight: 600;
+  }
+  .hero.empty .copy p {
+    margin: 0;
+    color: var(--pencil);
+    font-size: 14px;
+  }
+
+  /* ---------- Tabs ---------- */
+
+  .tabs {
+    display: inline-flex;
+    background: var(--line);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin-bottom: 22px;
+  }
+
+  .tab {
+    border: none;
+    background: transparent;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    border-radius: 5px;
+  }
+
+  .tab.active {
+    background: var(--paper-raised);
+    color: var(--ink);
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  /* ---------- List view ---------- */
+
+  .section-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pencil);
+    margin: 26px 0 10px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  .exam-card {
+    display: flex;
+    background: var(--paper-raised);
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 3px var(--shadow);
+    margin-bottom: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .exam-card .tab-color {
+    width: 10px;
+    flex-shrink: 0;
+  }
+
+  .exam-card .perforation {
+    width: 0;
+    border-left: 1.5px dashed var(--line);
+    position: relative;
+  }
+  .exam-card .perforation::before,
+  .exam-card .perforation::after {
+    content: "";
+    position: absolute;
+    left: -7px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--paper);
+  }
+  .exam-card .perforation::before { top: -7px; }
+  .exam-card .perforation::after { bottom: -7px; }
+
+  .exam-card .body {
+    flex: 1;
+    padding: 16px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .exam-card .info h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 5px;
+  }
+
+  .exam-card .info .meta {
+    font-size: 13.5px;
+    color: var(--pencil);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .exam-card .info .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .exam-card .right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .countdown-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 6px 11px;
+    border-radius: 20px;
+    white-space: nowrap;
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .countdown-pill.soon { background: var(--amber-soft); color: var(--amber); }
+  .countdown-pill.urgent { background: var(--red-soft); color: var(--red); }
+  .countdown-pill.past { background: var(--line); color: var(--pencil); }
+
+  .row-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .icon-btn {
+    width: 30px; height: 30px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--pencil);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:hover { background: var(--paper); color: var(--ink); }
+  .icon-btn.danger:hover { background: var(--red-soft); color: var(--red); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--pencil);
+  }
+  .empty-state svg { margin-bottom: 14px; opacity: 0.75; }
+  .empty-state p { margin: 0; font-size: 14.5px; }
+
+  /* ---------- Calendar view ---------- */
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .cal-nav h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .cal-nav-btns { display: flex; gap: 6px; }
+  .nav-btn {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--line);
+    background: var(--paper-raised);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink);
+  }
+  .nav-btn:hover { border-color: var(--ink); }
+
+  .cal-grid {
+    background: var(--paper-raised);
+    border-radius: var(--radius-md);
+    box-shadow: 0 1px 3px var(--shadow);
+    overflow: hidden;
+  }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--line);
+  }
+  .cal-weekdays div {
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pencil);
+  }
+
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .cal-day {
+    min-height: 92px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cal-day:nth-child(7n) { border-right: none; }
+
+  .cal-day .date-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--pencil);
+    align-self: flex-end;
+  }
+  .cal-day.other-month { background: repeating-linear-gradient(135deg, var(--paper) 0 8px, #ECE9DC 8px 16px); }
+  .cal-day.other-month .date-num { opacity: 0.5; }
+  .cal-day.today { background: var(--green-soft); }
+  .cal-day.today .date-num { color: var(--green); font-weight: 600; }
+
+  .cal-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 4px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    border: none;
+    width: 100%;
+  }
+
+  /* ---------- Modal ---------- */
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 26, 41, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .overlay.show { opacity: 1; pointer-events: auto; }
+
+  .modal {
+    background: var(--paper-raised);
+    border-radius: var(--radius-md);
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 26px 26px 22px;
+    transform: translateY(10px);
+    transition: transform 0.15s ease;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  }
+  .overlay.show .modal { transform: translateY(0); }
+
+  .modal h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 21px;
+    margin: 0 0 18px;
+    font-weight: 600;
+  }
+
+  .field { margin-bottom: 15px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--pencil);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14.5px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--ink);
+    background: var(--paper-raised);
+  }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .error-text {
+    color: var(--red);
+    font-size: 12.5px;
+    margin-top: 5px;
+    display: none;
+  }
+  .field.has-error input { border-color: var(--red); }
+  .field.has-error .error-text { display: block; }
+
+  /* confirm popover */
+  .confirm-box {
+    background: var(--paper-raised);
+    border-radius: var(--radius-md);
+    padding: 22px;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  }
+  .confirm-box p { font-size: 14.5px; margin: 0 0 18px; }
+  .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #97402f; }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 620px) {
+    .cal-day { min-height: 70px; }
+    .hero { flex-direction: column; align-items: flex-start; }
+    .hero .stub { border-left: none; border-top: 1.5px dashed rgba(255,255,255,0.25); padding-left: 0; padding-top: 16px; width: 100%; }
+    .exam-card .body { flex-direction: column; align-items: flex-start; }
+    .exam-card .right { width: 100%; justify-content: space-between; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>Exam Planner</h1>
+      <p>Every exam you're facing, with the days counted down for you.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal()">
+      <span class="icon-plus"></span> Add exam
+    </button>
+  </header>
+
+  <div id="hero"></div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="list" onclick="setView('list')">List</button>
+    <button class="tab" data-view="calendar" onclick="setView('calendar')">Calendar</button>
+  </div>
+
+  <div id="list-view"></div>
+  <div id="calendar-view" style="display:none;"></div>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Add exam</h2>
+    <form id="exam-form" novalidate>
+      <input type="hidden" id="exam-id">
+      <div class="field" id="field-subject">
+        <label for="exam-subject">Subject or exam name</label>
+        <input type="text" id="exam-subject" placeholder="e.g. Calculus II" autocomplete="off">
+        <div class="error-text">Enter a subject or exam name.</div>
+      </div>
+      <div class="field-row">
+        <div class="field" id="field-date">
+          <label for="exam-date">Date</label>
+          <input type="date" id="exam-date">
+          <div class="error-text">Pick a date.</div>
+        </div>
+        <div class="field">
+          <label for="exam-time">Time <span style="font-weight:400;">(optional)</span></label>
+          <input type="time" id="exam-time">
+        </div>
+      </div>
+      <div class="field">
+        <label for="exam-location">Location <span style="font-weight:400;">(optional)</span></label>
+        <input type="text" id="exam-location" placeholder="e.g. Room 204" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="exam-notes">Notes <span style="font-weight:400;">(optional)</span></label>
+        <textarea id="exam-notes" placeholder="What to bring, what to review..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">Save exam</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <p>Delete <strong id="confirm-name">this exam</strong>? This can't be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---------- Firebase Setup ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDjmQ54DLeGJF9JyZIWonaJrlbeLjnfFY8",
+    authDomain: "exam-planner-c769a.firebaseapp.com",
+    databaseURL: "https://exam-planner-c769a-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "exam-planner-c769a",
+    storageBucket: "exam-planner-c769a.firebasestorage.app",
+    messagingSenderId: "774430071896",
+    appId: "1:774430071896:web:ef0401e3ebf6cd163ebe2d"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const examsRef = db.ref('exams');
+
+  const PALETTE = ['#2F6D5C', '#2A5C8A', '#8A4A2F', '#6B4A8A', '#A3752E', '#3D7A7A', '#8A2F4A', '#4A6B2F'];
+
+  let exams = [];
+  let currentView = 'list';
+  let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  let pendingDeleteId = null;
+
+  // ---------- Real-Time Synchronization ----------
+  function initRealtimeSync() {
+    examsRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        exams = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+      } else {
+        exams = [];
+      }
+      renderAll();
+    });
+  }
+
+  // ---------- Helpers ----------
+  function colorFor(subject) {
+    const s = (subject || '').trim().toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+    return PALETTE[hash % PALETTE.length];
+  }
+
+  function todayMidnight() {
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function parseDate(dateStr) {
+    const [y,m,d] = dateStr.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+
+  function daysUntil(dateStr) {
+    const target = parseDate(dateStr);
+    target.setHours(0,0,0,0);
+    return Math.round((target - todayMidnight()) / 86400000);
+  }
+
+  function formatDateLong(dateStr) {
+    const d = parseDate(dateStr);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+  }
+
+  function countdownLabel(days) {
+    if (days < 0) return { text: (days === -1 ? 'Yesterday' : `${-days} days ago`), cls: 'past' };
+    if (days === 0) return { text: 'Today', cls: 'urgent' };
+    if (days === 1) return { text: 'Tomorrow', cls: 'urgent' };
+    if (days <= 3) return { text: `In ${days} days`, cls: 'urgent' };
+    if (days <= 7) return { text: `In ${days} days`, cls: 'soon' };
+    return { text: `In ${days} days`, cls: '' };
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ---------- Rendering ----------
+  function renderAll() {
+    renderHero();
+    if (currentView === 'list') renderList(); else renderCalendar();
+  }
+
+  function renderHero() {
+    const hero = document.getElementById('hero');
+    const upcoming = exams
+      .filter(e => daysUntil(e.date) >= 0)
+      .sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''));
+
+    if (upcoming.length === 0) {
+      hero.innerHTML = `
+        <div class="hero empty">
+          <svg class="icon-cal" viewBox="0 0 48 48" fill="none">
+            <rect x="6" y="10" width="36" height="32" rx="4" stroke="#1B2A46" stroke-width="2"/>
+            <line x1="6" y1="18" x2="42" y2="18" stroke="#1B2A46" stroke-width="2"/>
+            <line x1="15" y1="6" x2="15" y2="14" stroke="#1B2A46" stroke-width="2" stroke-linecap="round"/>
+            <line x1="33" y1="6" x2="33" y2="14" stroke="#1B2A46" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="24" cy="30" r="4" stroke="#2F6D5C" stroke-width="2"/>
+          </svg>
+          <div class="copy">
+            <h2>No exams on the books</h2>
+            <p>Add your first exam and the countdown starts here.</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const next = upcoming[0];
+    const dLabel = countdownLabel(daysUntil(next.date));
+    const color = colorFor(next.subject);
+    hero.innerHTML = `
+      <div class="hero">
+        <div>
+          <p class="label">Next up</p>
+          <p class="count">${daysUntil(next.date) === 0 ? 'Today' : daysUntil(next.date)}<small>${daysUntil(next.date) === 0 ? '' : (daysUntil(next.date) === 1 ? 'day left' : 'days left')}</small></p>
+          <p class="exam-name">${escapeHtml(next.subject)}</p>
+          <p class="exam-meta">${formatDateLong(next.date)}${next.time ? ' · ' + formatTime(next.time) : ''}${next.location ? ' · ' + escapeHtml(next.location) : ''}</p>
+        </div>
+        <div class="stub">
+          <span class="swatch" style="background:${color}"></span>
+          <span style="font-size:12.5px; color:#A9B6D1;">${upcoming.length} exam${upcoming.length === 1 ? '' : 's'} upcoming</span>
+        </div>
+      </div>`;
+  }
+
+  function renderList() {
+    const container = document.getElementById('list-view');
+    if (exams.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="6" width="32" height="38" rx="3" stroke="#746C5C" stroke-width="2"/>
+            <line x1="14" y1="16" x2="34" y2="16" stroke="#746C5C" stroke-width="2"/>
+            <line x1="14" y1="24" x2="34" y2="24" stroke="#746C5C" stroke-width="2"/>
+            <line x1="14" y1="32" x2="26" y2="32" stroke="#746C5C" stroke-width="2"/>
+          </svg>
+          <p>No exams yet. Add one and it'll show up here.</p>
+        </div>`;
+      return;
+    }
+
+    const sorted = [...exams].sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''));
+    const upcoming = sorted.filter(e => daysUntil(e.date) >= 0);
+    const past = sorted.filter(e => daysUntil(e.date) < 0).reverse();
+
+    let html = '';
+    if (upcoming.length) {
+      html += `<div class="section-title">Upcoming</div>`;
+      html += upcoming.map(cardHtml).join('');
+    }
+    if (past.length) {
+      html += `<div class="section-title">Past</div>`;
+      html += past.map(cardHtml).join('');
+    }
+    container.innerHTML = html;
+  }
+
+  function cardHtml(e) {
+    const color = colorFor(e.subject);
+    const c = countdownLabel(daysUntil(e.date));
+    return `
+      <div class="exam-card">
+        <div class="tab-color" style="background:${color}"></div>
+        <div class="perforation"></div>
+        <div class="body">
+          <div class="info">
+            <h3>${escapeHtml(e.subject)}</h3>
+            <div class="meta">
+              <span>${formatDateLong(e.date)}</span>
+              ${e.time ? `<span>${formatTime(e.time)}</span>` : ''}
+              ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ''}
+            </div>
+          </div>
+          <div class="right">
+            <span class="countdown-pill ${c.cls}">${c.text}</span>
+            <div class="row-actions">
+              <button class="icon-btn" title="Edit" onclick="openModal('${e.id}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l11-11-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="icon-btn danger" title="Delete" onclick="askDelete('${e.id}')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0h10l-1 13H7L6 7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderCalendar() {
+    const container = document.getElementById('calendar-view');
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+    const monthName = calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const firstDay = new Date(year, month, 1);
+    // Adjust start offset to make Monday the first day of the week
+    let startOffset = (firstDay.getDay() + 6) % 7; 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const cells = [];
+    for (let i = startOffset - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrevMonth - i, other: true, dateStr: null });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      cells.push({ day: d, other: false, dateStr });
+    }
+    while (cells.length % 7 !== 0) {
+      cells.push({ day: cells.length, other: true, dateStr: null });
+    }
+
+    const today = todayMidnight();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    let cellsHtml = cells.map(c => {
+      const dayExams = c.dateStr ? exams.filter(e => e.date === c.dateStr).sort((a,b) => (a.time||'').localeCompare(b.time||'')) : [];
+      const isToday = c.dateStr === todayStr;
+      const chips = dayExams.slice(0, 3).map(e =>
+        `<button class="cal-chip" style="background:${colorFor(e.subject)}" onclick="openModal('${e.id}')" title="${escapeHtml(e.subject)}">${escapeHtml(e.subject)}</button>`
+      ).join('');
+      const more = dayExams.length > 3 ? `<span style="font-size:10.5px; color:var(--pencil);">+${dayExams.length - 3} more</span>` : '';
+      return `<div class="cal-day ${c.other ? 'other-month' : ''} ${isToday ? 'today' : ''}">
+        <span class="date-num">${c.day}</span>
+        ${chips}${more}
+      </div>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="cal-nav">
+        <h2>${monthName}</h2>
+        <div class="cal-nav-btns">
+          <button class="nav-btn" onclick="shiftMonth(-1)" aria-label="Previous month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="nav-btn" onclick="goToday()" aria-label="This month" title="This month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+          </button>
+          <button class="nav-btn" onclick="shiftMonth(1)" aria-label="Next month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-weekdays">${weekdays.map(w => `<div>${w}</div>`).join('')}</div>
+        <div class="cal-days">${cellsHtml}</div>
+      </div>`;
+  }
+
+  function shiftMonth(delta) {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + delta, 1);
+    renderCalendar();
+  }
+  function goToday() {
+    const n = new Date();
+    calMonth = new Date(n.getFullYear(), n.getMonth(), 1);
+    renderCalendar();
+  }
+
+  function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+    document.getElementById('list-view').style.display = view === 'list' ? '' : 'none';
+    document.getElementById('calendar-view').style.display = view === 'calendar' ? '' : 'none';
+    renderAll();
+  }
+
+  // ---------- Modal (add/edit) ----------
+  function openModal(id) {
+    const overlay = document.getElementById('modal-overlay');
+    const form = document.getElementById('exam-form');
+    form.reset();
+    clearErrors();
+
+    if (id) {
+      const e = exams.find(x => x.id === id);
+      document.getElementById('modal-title').textContent = 'Edit exam';
+      document.getElementById('save-btn').textContent = 'Update exam';
+      document.getElementById('exam-id').value = e.id;
+      document.getElementById('exam-subject').value = e.subject;
+      document.getElementById('exam-date').value = e.date;
+      document.getElementById('exam-time').value = e.time || '';
+      document.getElementById('exam-location').value = e.location || '';
+      document.getElementById('exam-notes').value = e.notes || '';
+    } else {
+      document.getElementById('modal-title').textContent = 'Add exam';
+      document.getElementById('save-btn').textContent = 'Save exam';
+      document.getElementById('exam-id').value = '';
+    }
+    overlay.classList.add('show');
+    setTimeout(() => document.getElementById('exam-subject').focus(), 50);
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('show');
+  }
+
+  function clearErrors() {
+    document.getElementById('field-subject').classList.remove('has-error');
+    document.getElementById('field-date').classList.remove('has-error');
+  }
+
+  document.getElementById('exam-form').addEventListener('submit', function(ev) {
+    ev.preventDefault();
+    clearErrors();
+    const subject = document.getElementById('exam-subject').value.trim();
+    const date = document.getElementById('exam-date').value;
+    let valid = true;
+    if (!subject) { document.getElementById('field-subject').classList.add('has-error'); valid = false; }
+    if (!date) { document.getElementById('field-date').classList.add('has-error'); valid = false; }
+    if (!valid) return;
+
+    const id = document.getElementById('exam-id').value;
+    const data = {
+      subject,
+      date,
+      time: document.getElementById('exam-time').value,
+      location: document.getElementById('exam-location').value.trim(),
+      notes: document.getElementById('exam-notes').value.trim(),
+    };
+
+    if (id) {
+      examsRef.child(id).update(data);
+      showToast('Exam updated');
+    } else {
+      examsRef.push(data);
+      showToast('Exam added');
+    }
+    closeModal();
+  });
+
+  // ---------- Delete confirm ----------
+  function askDelete(id) {
+    pendingDeleteId = id;
+    const e = exams.find(x => x.id === id);
+    document.getElementById('confirm-name').textContent = e ? e.subject : 'this exam';
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+  function closeConfirm() {
+    pendingDeleteId = null;
+    document.getElementById('confirm-overlay').classList.remove('show');
+  }
+  function confirmDelete() {
+    if (pendingDeleteId) {
+      examsRef.child(pendingDeleteId).remove();
+      showToast('Exam deleted');
+    }
+    closeConfirm();
+  }
+
+  // close overlays on backdrop click / escape
+  document.getElementById('modal-overlay').addEventListener('click', (e) => { if (e.target.id === 'modal-overlay') closeModal(); });
+  document.getElementById('confirm-overlay').addEventListener('click', (e) => { if (e.target.id === 'confirm-overlay') closeConfirm(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+  });
+
+  // ---------- Init ----------
+  initRealtimeSync();
+</script>
+</body>
+</html>
