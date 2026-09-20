@@ -386,6 +386,7 @@
     font-size: 13px;
     border: 1px solid var(--line);
     transition: background 0.12s ease, border-color 0.12s ease;
+    cursor: pointer;
   }
   .file-link-tag:hover {
     border-color: var(--green);
@@ -397,6 +398,13 @@
   .file-link-tag.download-btn:hover {
     border-color: var(--ink-soft);
     color: var(--ink);
+  }
+  .file-link-tag.remove-btn {
+    color: var(--red);
+  }
+  .file-link-tag.remove-btn:hover {
+    border-color: var(--red);
+    background: var(--red-soft);
   }
 
   .countdown-pill {
@@ -598,10 +606,14 @@
   .file-preview {
     font-size: 12.5px;
     color: var(--pencil);
-    margin-top: 5px;
+    margin-top: 6px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    background: var(--paper);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
   }
 
   .modal-actions {
@@ -722,7 +734,10 @@
       <div class="field">
         <label for="exam-file-input">Attach Document or File <span style="font-weight:400;">(optional)</span></label>
         <input type="file" id="exam-file-input">
-        <div class="file-preview" id="current-file-preview" style="display:none;"></div>
+        <div class="file-preview" id="current-file-preview" style="display:none;">
+          <span id="file-preview-name"></span>
+          <button type="button" class="btn-plain" style="color:var(--red);" onclick="clearAttachedFile()">Remove file</button>
+        </div>
       </div>
       <div class="field">
         <label for="exam-notes">Notes <span style="font-weight:400;">(optional)</span></label>
@@ -883,6 +898,35 @@
     showToast._timer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
+  // Opens base64 file data safely in a new browser window/tab
+  function viewFile(id) {
+    const e = exams.find(x => x.id === id);
+    if (!e || !e.fileData || !e.fileData.data) return;
+
+    try {
+      const parts = e.fileData.data.split(';');
+      const mime = parts[0].replace('data:', '') || 'application/octet-stream';
+      const base64 = parts[1].replace('base64,', '');
+      
+      const binary = atob(base64);
+      const array = [];
+      for (let i = 0; i < binary.length; i++) {
+        array.push(binary.charCodeAt(i));
+      }
+      const blob = new Blob([new Uint8Array(array)], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      alert("Unable to open file preview. Please try downloading it instead.");
+    }
+  }
+
+  function removeFileFromExam(id) {
+    examsRef.child(id).child('fileData').remove().then(() => {
+      showToast('File removed');
+    });
+  }
+
   // ---------- Rendering ----------
   function renderAll() {
     renderHero();
@@ -1007,14 +1051,18 @@
                 <div class="detail-block">
                   <strong>Attached File:</strong>
                   <div class="file-actions">
-                    <a href="${e.fileData.data}" target="_blank" rel="noopener noreferrer" class="file-link-tag">
+                    <button type="button" onclick="viewFile('${e.id}')" class="file-link-tag">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="2"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke="currentColor" stroke-width="2"/></svg>
                       View ${escapeHtml(e.fileData.name)}
-                    </a>
+                    </button>
                     <a href="${e.fileData.data}" download="${escapeHtml(e.fileData.name)}" class="file-link-tag download-btn">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                       Download
                     </a>
+                    <button type="button" onclick="removeFileFromExam('${e.id}')" class="file-link-tag remove-btn">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      Delete File
+                    </button>
                   </div>
                 </div>
               ` : ''}
@@ -1134,8 +1182,8 @@
       
       if (e.fileData) {
         currentFileData = e.fileData;
-        preview.textContent = `Attached: ${e.fileData.name}`;
-        preview.style.display = 'block';
+        document.getElementById('file-preview-name').textContent = `Attached: ${e.fileData.name}`;
+        preview.style.display = 'flex';
       }
     } else {
       document.getElementById('modal-title').textContent = 'Add exam';
@@ -1155,6 +1203,12 @@
     document.getElementById('field-date').classList.remove('has-error');
   }
 
+  function clearAttachedFile() {
+    currentFileData = null;
+    document.getElementById('exam-file-input').value = '';
+    document.getElementById('current-file-preview').style.display = 'none';
+  }
+
   // ---------- File Handling ----------
   document.getElementById('exam-file-input').addEventListener('change', function(e) {
     const file = e.target.files[0];
@@ -1172,9 +1226,8 @@
         name: file.name,
         data: evt.target.result
       };
-      const preview = document.getElementById('current-file-preview');
-      preview.textContent = `Attached: ${file.name}`;
-      preview.style.display = 'block';
+      document.getElementById('file-preview-name').textContent = `Attached: ${file.name}`;
+      document.getElementById('current-file-preview').style.display = 'flex';
     };
     reader.readAsDataURL(file);
   });
@@ -1200,6 +1253,8 @@
 
     if (currentFileData) {
       data.fileData = currentFileData;
+    } else {
+      data.fileData = null; // Explicitly clear if file was removed
     }
 
     if (id) {
