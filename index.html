@@ -173,17 +173,10 @@
 
   .hero .count {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 52px;
+    font-size: 40px;
     font-weight: 600;
-    line-height: 1;
+    line-height: 1.1;
     margin: 0;
-  }
-
-  .hero .count small {
-    font-size: 16px;
-    font-weight: 500;
-    color: #A9B6D1;
-    margin-left: 6px;
   }
 
   .hero .exam-name {
@@ -309,8 +302,14 @@
     flex: 1;
     padding: 16px 18px;
     display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .exam-card .top-row {
+    display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 14px;
     flex-wrap: wrap;
   }
@@ -340,6 +339,49 @@
     display: flex;
     align-items: center;
     gap: 14px;
+  }
+
+  .exam-card .extra-details {
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13.5px;
+  }
+
+  .detail-block strong {
+    color: var(--ink);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .detail-block p {
+    margin: 0;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+  }
+
+  .file-link-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--paper);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--green);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    width: fit-content;
+    border: 1px solid var(--line);
+  }
+  .file-link-tag:hover {
+    border-color: var(--green);
   }
 
   .countdown-pill {
@@ -490,7 +532,7 @@
     background: var(--paper-raised);
     border-radius: var(--radius-md);
     width: 100%;
-    max-width: 420px;
+    max-width: 480px;
     max-height: 90vh;
     overflow-y: auto;
     padding: 26px 26px 22px;
@@ -588,7 +630,7 @@
     .cal-day { min-height: 70px; }
     .hero { flex-direction: column; align-items: flex-start; }
     .hero .stub { border-left: none; border-top: 1.5px dashed rgba(255,255,255,0.25); padding-left: 0; padding-top: 16px; width: 100%; }
-    .exam-card .body { flex-direction: column; align-items: flex-start; }
+    .exam-card .top-row { flex-direction: column; align-items: flex-start; }
     .exam-card .right { width: 100%; justify-content: space-between; }
   }
 
@@ -650,8 +692,16 @@
         <input type="text" id="exam-location" placeholder="e.g. Room 204" autocomplete="off">
       </div>
       <div class="field">
+        <label for="exam-lernziele">Lernziele / Learning Goals <span style="font-weight:400;">(optional)</span></label>
+        <textarea id="exam-lernziele" placeholder="Topics to cover, goals, or study objectives..."></textarea>
+      </div>
+      <div class="field">
+        <label for="exam-file">File / Document Link <span style="font-weight:400;">(optional)</span></label>
+        <input type="url" id="exam-file" placeholder="https://drive.google.com/... or link to study material" autocomplete="off">
+      </div>
+      <div class="field">
         <label for="exam-notes">Notes <span style="font-weight:400;">(optional)</span></label>
-        <textarea id="exam-notes" placeholder="What to bring, what to review..."></textarea>
+        <textarea id="exam-notes" placeholder="What to bring, room details, general notes..."></textarea>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -738,6 +788,39 @@
     return Math.round((target - todayMidnight()) / 86400000);
   }
 
+  function formatMonthsDays(dateStr) {
+    const target = parseDate(dateStr);
+    const today = todayMidnight();
+    const totalDays = daysUntil(dateStr);
+
+    if (totalDays < 0) {
+      if (totalDays === -1) return "Yesterday";
+      return `${Math.abs(totalDays)} days ago`;
+    }
+    if (totalDays === 0) return "Today";
+    if (totalDays === 1) return "Tomorrow";
+
+    let months = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
+    let dayDiff = target.getDate() - today.getDate();
+
+    if (dayDiff < 0) {
+      months--;
+      const tempDate = new Date(target.getFullYear(), target.getMonth(), 0);
+      dayDiff += tempDate.getDate();
+    }
+
+    if (months > 0) {
+      const mStr = `${months} month${months > 1 ? 's' : ''}`;
+      if (dayDiff > 0) {
+        const dStr = `${dayDiff} day${dayDiff > 1 ? 's' : ''}`;
+        return `In ${mStr}, ${dStr}`;
+      }
+      return `In ${mStr}`;
+    }
+
+    return `In ${totalDays} days`;
+  }
+
   function formatDateLong(dateStr) {
     const d = parseDate(dateStr);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -751,13 +834,13 @@
     return `${h12}:${String(m).padStart(2,'0')} ${period}`;
   }
 
-  function countdownLabel(days) {
-    if (days < 0) return { text: (days === -1 ? 'Yesterday' : `${-days} days ago`), cls: 'past' };
-    if (days === 0) return { text: 'Today', cls: 'urgent' };
-    if (days === 1) return { text: 'Tomorrow', cls: 'urgent' };
-    if (days <= 3) return { text: `In ${days} days`, cls: 'urgent' };
-    if (days <= 7) return { text: `In ${days} days`, cls: 'soon' };
-    return { text: `In ${days} days`, cls: '' };
+  function countdownLabel(dateStr) {
+    const days = daysUntil(dateStr);
+    const text = formatMonthsDays(dateStr);
+    if (days < 0) return { text, cls: 'past' };
+    if (days <= 1) return { text, cls: 'urgent' };
+    if (days <= 7) return { text, cls: 'soon' };
+    return { text, cls: '' };
   }
 
   function escapeHtml(str) {
@@ -805,13 +888,13 @@
     }
 
     const next = upcoming[0];
-    const dLabel = countdownLabel(daysUntil(next.date));
+    const countdownText = formatMonthsDays(next.date);
     const color = colorFor(next.subject);
     hero.innerHTML = `
       <div class="hero">
         <div>
           <p class="label">Next up</p>
-          <p class="count">${daysUntil(next.date) === 0 ? 'Today' : daysUntil(next.date)}<small>${daysUntil(next.date) === 0 ? '' : (daysUntil(next.date) === 1 ? 'day left' : 'days left')}</small></p>
+          <p class="count">${countdownText}</p>
           <p class="exam-name">${escapeHtml(next.subject)}</p>
           <p class="exam-meta">${formatDateLong(next.date)}${next.time ? ' · ' + formatTime(next.time) : ''}${next.location ? ' · ' + escapeHtml(next.location) : ''}</p>
         </div>
@@ -856,31 +939,62 @@
 
   function cardHtml(e) {
     const color = colorFor(e.subject);
-    const c = countdownLabel(daysUntil(e.date));
+    const c = countdownLabel(e.date);
+
+    let hasExtra = e.lernziele || e.file || e.notes;
+
     return `
       <div class="exam-card">
         <div class="tab-color" style="background:${color}"></div>
         <div class="perforation"></div>
         <div class="body">
-          <div class="info">
-            <h3>${escapeHtml(e.subject)}</h3>
-            <div class="meta">
-              <span>${formatDateLong(e.date)}</span>
-              ${e.time ? `<span>${formatTime(e.time)}</span>` : ''}
-              ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ''}
+          <div class="top-row">
+            <div class="info">
+              <h3>${escapeHtml(e.subject)}</h3>
+              <div class="meta">
+                <span>${formatDateLong(e.date)}</span>
+                ${e.time ? `<span>${formatTime(e.time)}</span>` : ''}
+                ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ''}
+              </div>
+            </div>
+            <div class="right">
+              <span class="countdown-pill ${c.cls}">${c.text}</span>
+              <div class="row-actions">
+                <button class="icon-btn" title="Edit" onclick="openModal('${e.id}')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l11-11-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="icon-btn danger" title="Delete" onclick="askDelete('${e.id}')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0h10l-1 13H7L6 7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-          <div class="right">
-            <span class="countdown-pill ${c.cls}">${c.text}</span>
-            <div class="row-actions">
-              <button class="icon-btn" title="Edit" onclick="openModal('${e.id}')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l11-11-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-              </button>
-              <button class="icon-btn danger" title="Delete" onclick="askDelete('${e.id}')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0h10l-1 13H7L6 7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+
+          ${hasExtra ? `
+            <div class="extra-details">
+              ${e.lernziele ? `
+                <div class="detail-block">
+                  <strong>Lernziele / Goals:</strong>
+                  <p>${escapeHtml(e.lernziele)}</p>
+                </div>
+              ` : ''}
+              ${e.file ? `
+                <div class="detail-block">
+                  <strong>Attached File / Material:</strong>
+                  <a href="${escapeHtml(e.file)}" target="_blank" rel="noopener noreferrer" class="file-link-tag">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Open Document Link
+                  </a>
+                </div>
+              ` : ''}
+              ${e.notes ? `
+                <div class="detail-block">
+                  <strong>Notes:</strong>
+                  <p>${escapeHtml(e.notes)}</p>
+                </div>
+              ` : ''}
             </div>
-          </div>
+          ` : ''}
         </div>
       </div>`;
   }
@@ -892,7 +1006,6 @@
     const monthName = calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     const firstDay = new Date(year, month, 1);
-    // Adjust start offset to make Monday the first day of the week
     let startOffset = (firstDay.getDay() + 6) % 7; 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
@@ -982,6 +1095,8 @@
       document.getElementById('exam-date').value = e.date;
       document.getElementById('exam-time').value = e.time || '';
       document.getElementById('exam-location').value = e.location || '';
+      document.getElementById('exam-lernziele').value = e.lernziele || '';
+      document.getElementById('exam-file').value = e.file || '';
       document.getElementById('exam-notes').value = e.notes || '';
     } else {
       document.getElementById('modal-title').textContent = 'Add exam';
@@ -1017,6 +1132,8 @@
       date,
       time: document.getElementById('exam-time').value,
       location: document.getElementById('exam-location').value.trim(),
+      lernziele: document.getElementById('exam-lernziele').value.trim(),
+      file: document.getElementById('exam-file').value.trim(),
       notes: document.getElementById('exam-notes').value.trim(),
     };
 
